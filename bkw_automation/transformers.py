@@ -116,6 +116,26 @@ class DataTransformer:
             logger.info(f"✓ Removed {removed} duplicate rows")
         
         return df
+
+    def format_timestamp(self, df: pd.DataFrame, column: str = 'timestamp') -> pd.DataFrame:
+        """
+        Normalize a timestamp column to ISO 8601 with trailing Z.
+
+        Args:
+            df: DataFrame to process
+            column: Column name to normalize
+
+        Returns:
+            DataFrame with normalized timestamp column
+        """
+        if column not in df.columns:
+            return df
+
+        df = df.copy()
+        df[column] = pd.to_datetime(df[column], errors='coerce', utc=True)
+        df[column] = df[column].dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        logger.info(f"✓ Normalized timestamp column '{column}' to ISO 8601 with Z")
+        return df
     
     def handle_missing_values(self, df: pd.DataFrame,
                              strategy: str = 'drop',
@@ -173,8 +193,11 @@ class DataTransformer:
         
         # Step 3: Clean data
         df = self.clean_data(df)
+
+        # Step 4: Normalize timestamp column if present
+        df = self.format_timestamp(df, column='timestamp')
         
-        # Step 4: Handle missing values
+        # Step 5: Handle missing values
         df = self.handle_missing_values(df, strategy=missing_value_strategy)
         
         self.transformed_df = df

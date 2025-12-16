@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     sharepoint_document_library: str = "Documents"
     sharepoint_folder_incoming: str = "Incoming"
     sharepoint_folder_processed: str = "Processed"
+    sharepoint_username: Optional[str] = None
+    sharepoint_password: Optional[str] = None
     
     # Azure configuration
     azure_subscription_id: Optional[str] = None
