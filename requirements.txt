@@ -1,0 +1,12 @@
+# BKW Automation Requirements
+# Install with: pip install -r requirements.txt
+
+pandas>=2.0.0
+openpyxl>=3.1.2
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+office365-rest-python-client>=2.5.0
+azure-identity>=1.14.0
+azure-storage-blob>=12.18.0
+pytz>=2023.3

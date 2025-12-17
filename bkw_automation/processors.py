@@ -135,7 +135,8 @@ def process_daily_data(source_folder: Path,
                       local_output_dir: Path,
                       onedrive_output_dir: Path,
                       date_str: str,
-                      verbose: bool = False) -> Dict:
+                      verbose: bool = False,
+                      allow_fallback: bool = False) -> Dict:
     """
     Process all data for a given date.
     
@@ -227,6 +228,20 @@ def process_daily_data(source_folder: Path,
         if tr_id:
             logger.info(f"  ✓ Matched: {matched_name} → {tr_id}")
         else:
+            if not allow_fallback:
+                logger.warning("  ⚠ No catalog match, skipping file (fallback disabled)")
+                summary['failed'] += 1
+                summary['files'].append({
+                    'source': excel_file.name,
+                    'output': None,
+                    'tr_id': None,
+                    'rows': 0,
+                    'size_kb': 0,
+                    'success': False,
+                    'error': 'No catalog match'
+                })
+                print()
+                continue
             logger.warning(f"  ⚠ No catalog match, using fallback name")
         
         # Process
