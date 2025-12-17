@@ -27,7 +27,22 @@ def load_catalog(catalog_path: Path, verbose: bool = False) -> Optional[pd.DataF
         logger.error(f"Catalog not found: {catalog_path}")
         return None
     
-    catalog = pd.read_csv(catalog_path)
+    # Try different encodings (common for German characters)
+    encodings = ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']
+    catalog = None
+    
+    for encoding in encodings:
+        try:
+            catalog = pd.read_csv(catalog_path, encoding=encoding)
+            if verbose:
+                logger.info(f"Loaded catalog with encoding: {encoding}")
+            break
+        except UnicodeDecodeError:
+            continue
+    
+    if catalog is None:
+        logger.error(f"Failed to load catalog with any encoding: {encodings}")
+        return None
     
     if verbose:
         logger.info(f"Loaded catalog: {len(catalog)} entries")

@@ -172,14 +172,26 @@ def process_daily_data(source_folder: Path,
         logger.error(f"Date folder not found: {today_folder}")
         return summary
     
-    # Find ZIP file
+    # Find ZIP file (validate it's actually a ZIP)
     zip_candidates = sorted(today_folder.glob('*.zip'), key=lambda p: p.stat().st_mtime, reverse=True)
     
     if not zip_candidates:
         logger.error(f"No ZIP files found in: {today_folder}")
         return summary
     
-    zip_path = zip_candidates[0]
+    # Validate the ZIP file is actually valid
+    zip_path = None
+    for candidate in zip_candidates:
+        if zipfile.is_zipfile(candidate):
+            zip_path = candidate
+            break
+        else:
+            logger.warning(f"Skipping invalid ZIP file: {candidate.name}")
+    
+    if zip_path is None:
+        logger.error(f"No valid ZIP files found in: {today_folder}")
+        return summary
+    
     logger.info(f"\n✓ Found ZIP: {zip_path.name}\n")
     
     # Extract ZIP

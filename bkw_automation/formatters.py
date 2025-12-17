@@ -13,6 +13,7 @@ def formatdkw(df: pd.DataFrame) -> pd.DataFrame:
     Format DKW (Datenkompressionswerkzeug) data.
     
     Renames columns, normalizes timestamps to ISO 8601 with Z, and adds status information.
+    Handles timezone conversion from Swiss local time (CET/CEST) to UTC.
     
     Args:
         df: DataFrame with columns 'Datum / Uhrzeit' and 'Wind Speed (avg)'
@@ -25,8 +26,11 @@ def formatdkw(df: pd.DataFrame) -> pd.DataFrame:
         'Wind Speed (avg)': 'value'
     })
     
-    # Normalize timestamp to ISO 8601 with trailing Z
-    df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce', utc=True)
+    # Parse timestamps as Swiss local time (Europe/Zurich), then convert to UTC
+    # This automatically handles CET (UTC+1) and CEST (UTC+2) transitions
+    df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+    df['timestamp'] = df['timestamp'].dt.tz_localize('Europe/Zurich', ambiguous='infer', nonexistent='shift_forward')
+    df['timestamp'] = df['timestamp'].dt.tz_convert('UTC')
     df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%dT%H:%M:%SZ')
     
     df['status'] = df['value'].apply(lambda x: 0 if x else -1)
