@@ -9,19 +9,25 @@ REM ====================================================================
 REM Change to project directory
 cd /d "%~dp0"
 
-REM Activate Python environment and run script
-REM Option 1: If using conda environment
-REM call conda activate your_env_name
-REM python run_daily_processing.py
+REM Ensure logs directory exists
+if not exist "%~dp0logs" mkdir "%~dp0logs"
 
-REM Option 2: If using system Python (default)
-python run_daily_processing.py
+REM Log start time
+echo [%date% %time%] BKW Processing Started >> "%~dp0logs\task_scheduler.log"
 
-REM Option 3: If using specific Python installation
-REM "C:\Path\To\Python\python.exe" run_daily_processing.py
+REM Pre-sync INCOMING (ensure new data is downloaded before processing)
+echo [%date% %time%] Forcing OneDrive download (incoming)... >> "%~dp0logs\task_scheduler.log"
+powershell.exe -ExecutionPolicy Bypass -File "%~dp0force_onedrive_sync.ps1" -FolderPath "C:\Users\sandovalsu\OneDrive - NOTUS energy GmbH\PowerAutomate\BKW test\Dynamic_folder\incoming" >> "%~dp0logs\task_scheduler.log" 2>&1
+echo [%date% %time%] Incoming sync completed (exit code: %ERRORLEVEL%) >> "%~dp0logs\task_scheduler.log"
+
+REM Run with absolute Python path (works even when user not logged on)
+"C:\Users\sandovalsu\AppData\Local\Programs\Python\Python311\python.exe" "%~dp0run_daily_processing.py" >> "%~dp0logs\task_scheduler.log" 2>&1
+
+REM Post-sync OUTGOING (upload processed files)
+echo [%date% %time%] Forcing OneDrive upload (outgoing)... >> "%~dp0logs\task_scheduler.log"
+powershell.exe -ExecutionPolicy Bypass -File "%~dp0force_onedrive_sync.ps1" -FolderPath "C:\Users\sandovalsu\OneDrive - NOTUS energy GmbH\PowerAutomate\BKW test\Dynamic_folder\outgoing" >> "%~dp0logs\task_scheduler.log" 2>&1
+echo [%date% %time%] Outgoing sync completed (exit code: %ERRORLEVEL%) >> "%~dp0logs\task_scheduler.log"
 
 REM Log completion
-echo Processing completed at %date% %time%
-
-REM Keep window open if running manually (comment out for scheduled tasks)
-REM pause
+echo [%date% %time%] Processing completed - Exit code: %ERRORLEVEL% >> "%~dp0logs\task_scheduler.log"
+echo.>> "%~dp0logs\task_scheduler.log"

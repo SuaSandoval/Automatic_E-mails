@@ -74,10 +74,10 @@ def main():
         # ====================================================================
         # CONTROL VARIABLES
         # ====================================================================
-        VERBOSE = False              # Set to False to reduce logging output
-        PROCESS_DATE = None         # Set to 'dd-mm-YYYY' for specific date, or None for today
-        ALLOW_FALLBACK = False      # If False, skip files not found in catalog
-        
+        VERBOSE = False               # Set to False to reduce logging output
+        PROCESS_DATE = None          # Set to 'dd-mm-YYYY' for specific date, or None for today
+        ALLOW_FALLBACK = False       # If False, skip files not found in catalog
+        SAVE_TO_ONEDRIVE = True      # Set to False to only save locally (sync OneDrive separately)
         # ====================================================================
         # PATH CONFIGURATION
         # ====================================================================
@@ -120,11 +120,14 @@ def main():
         today_str = PROCESS_DATE if PROCESS_DATE else datetime.now().strftime('%d-%m-%Y')
         logger.info(f"Processing date: {today_str}")
         
+        # Use local output only if OneDrive sync disabled
+        onedrive_output = OUTPUT_DIR if SAVE_TO_ONEDRIVE else LOCAL_OUTPUT_DIR
+        
         processing_summary = process_daily_data(
             source_folder=DATA_SOURCE_DIR,
             catalog=catalog,
             local_output_dir=LOCAL_OUTPUT_DIR,
-            onedrive_output_dir=OUTPUT_DIR,
+            onedrive_output_dir=onedrive_output,
             date_str=today_str,
             verbose=VERBOSE,
             allow_fallback=ALLOW_FALLBACK
