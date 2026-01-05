@@ -20,6 +20,10 @@ echo [%date% %time%] Forcing OneDrive download (incoming)... >> "%~dp0logs\task_
 powershell.exe -ExecutionPolicy Bypass -File "%~dp0force_onedrive_sync.ps1" -FolderPath "C:\Users\sandovalsu\OneDrive - NOTUS energy GmbH\PowerAutomate\BKW test\Dynamic_folder\incoming" >> "%~dp0logs\task_scheduler.log" 2>&1
 echo [%date% %time%] Incoming sync completed (exit code: %ERRORLEVEL%) >> "%~dp0logs\task_scheduler.log"
 
+REM Additional safety wait to ensure OneDrive has fully committed the sync
+echo [%date% %time%] Waiting 5 seconds for OneDrive to stabilize... >> "%~dp0logs\task_scheduler.log"
+timeout /t 5 /nobreak >nul
+
 REM Run with absolute Python path (works even when user not logged on)
 "C:\Users\sandovalsu\AppData\Local\Programs\Python\Python311\python.exe" "%~dp0run_daily_processing.py" >> "%~dp0logs\task_scheduler.log" 2>&1
 
