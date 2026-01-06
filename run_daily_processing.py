@@ -147,11 +147,11 @@ def main():
             verification = verify_csv_file(sample_file, verbose=VERBOSE)
             
             if verification['valid']:
-                logger.info(f"✓ Validation passed for: {sample_file.name}")
+                logger.info(f" Validation passed for: {sample_file.name}")
             else:
-                logger.warning(f"⚠ Validation issues in: {sample_file.name}")
+                logger.warning(f" X Validation issues in: {sample_file.name}")
         else:
-            logger.warning("⚠ No files were processed")
+            logger.warning(" X No files were processed")
         
         logger.info("=" * 80)
         logger.info("BKW DAILY PROCESSING COMPLETED SUCCESSFULLY")

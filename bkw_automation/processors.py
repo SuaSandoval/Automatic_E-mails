@@ -8,6 +8,7 @@ import pandas as pd
 import logging
 import zipfile
 import shutil
+import warnings
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -16,6 +17,13 @@ from .formatters import formatdkw
 from .catalog import match_file_to_tr_id, build_filename
 
 logger = logging.getLogger(__name__)
+
+# Silence noisy openpyxl style warning for style-less workbooks
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message="Workbook contains no default style, apply openpyxl's default",
+)
 
 
 def extract_zip_file(zip_path: Path, extract_dir: Path, verbose: bool = False) -> List[Path]:
@@ -173,36 +181,42 @@ def process_daily_data(source_folder: Path,
         logger.error(f"Date folder not found: {today_folder}")
         return summary
     
-    # Find ZIP file (validate it's actually a ZIP)
+    # Discover valid ZIP files (and ignore corrupt ones)
     zip_candidates = sorted(today_folder.glob('*.zip'), key=lambda p: p.stat().st_mtime, reverse=True)
-    
-    if not zip_candidates:
-        logger.error(f"No ZIP files found in: {today_folder}")
-        return summary
-    
-    # Validate the ZIP file is actually valid
-    zip_path = None
+    valid_zip_files = []
     for candidate in zip_candidates:
         if zipfile.is_zipfile(candidate):
-            zip_path = candidate
-            break
+            valid_zip_files.append(candidate)
         else:
             logger.warning(f"Skipping invalid ZIP file: {candidate.name}")
-    
-    if zip_path is None:
-        logger.error(f"No valid ZIP files found in: {today_folder}")
-        return summary
-    
-    logger.info(f"\n✓ Found ZIP: {zip_path.name}\n")
-    
-    # Extract ZIP
-    extract_dir = local_output_dir / f"extracted_{date_str}"
-    excel_files = extract_zip_file(zip_path, extract_dir, verbose=verbose)
-    
+
+    # Prepare a clean extraction root and gather Excel files from ZIPs and loose files
+    extract_root = local_output_dir / f"extracted_{date_str}"
+    if extract_root.exists():
+        shutil.rmtree(extract_root)
+    extract_root.mkdir(parents=True, exist_ok=True)
+
+    excel_files = []
+
+    if valid_zip_files:
+        logger.info(f"\n✓ Found {len(valid_zip_files)} ZIP file(s)\n")
+        for zip_path in valid_zip_files:
+            target_dir = extract_root / zip_path.stem
+            target_dir.mkdir(parents=True, exist_ok=True)
+            extracted = extract_zip_file(zip_path, target_dir, verbose=verbose)
+            excel_files.extend(extracted)
+    else:
+        logger.info("No valid ZIP files found; will look for loose Excel files.")
+
+    loose_excels = list(today_folder.glob('*.xlsx')) + list(today_folder.glob('*.xls'))
+    if loose_excels:
+        logger.info(f"✓ Found {len(loose_excels)} loose Excel file(s)")
+        excel_files.extend(loose_excels)
+
     summary['total_files'] = len(excel_files)
-    
+
     if not excel_files:
-        logger.warning("No Excel files found in ZIP")
+        logger.error("No Excel files found in ZIPs or in the source folder")
         return summary
     
     # Validate catalog coverage
@@ -226,10 +240,10 @@ def process_daily_data(source_folder: Path,
         tr_id, matched_name = match_file_to_tr_id(excel_file.stem, catalog, verbose=verbose)
         
         if tr_id:
-            logger.info(f"  ✓ Matched: {matched_name} → {tr_id}")
+            logger.info(f" Matched: {matched_name} --> {tr_id}")
         else:
             if not allow_fallback:
-                logger.warning("  ⚠ No catalog match, skipping file (fallback disabled)")
+                logger.warning("  X No catalog match, skipping file (fallback disabled)")
                 summary['failed'] += 1
                 summary['files'].append({
                     'source': excel_file.name,
@@ -242,7 +256,7 @@ def process_daily_data(source_folder: Path,
                 })
                 print()
                 continue
-            logger.warning(f"  ⚠ No catalog match, using fallback name")
+            logger.warning(f" X No catalog match, using fallback name")
         
         # Process
         success, info = process_excel_file(
